@@ -1,13 +1,24 @@
+---
+author: "Heti Pisarev"
+output:
+  html_document: default
+  pdf_document: default
+---
 
 # About the project
 
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
+*No idea what to write here. All GitHub and Markdown stuff is new for me and I am really confused right now. At least I have used R before*
+
+<b>Link to my GitHub repository</b><br>
+https://github.com/hetipisarev/IODS-project.git
 
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
 
 date()
-
 ```
-The text continues here.
-
+Some <h2>more</h2> text just for _testing_.
+One more try to add R code and output:
+```{r}
+print("Hello world!")
+```
