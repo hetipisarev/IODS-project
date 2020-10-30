@@ -6,8 +6,7 @@ output:
 ---
 
 # About the project
-
-*No idea what to write here. All GitHub and Markdown stuff is new for me and I am really confused right now. At least I have used R before*
+*No idea what to write here. All GitHub and Markdown stuff is new for me and I am really confused right now. At least I have used R before.*
 
 <b>Link to my GitHub repository</b><br>
 https://github.com/hetipisarev/IODS-project.git
