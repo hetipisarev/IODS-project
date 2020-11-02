@@ -1,5 +1,14 @@
-# Insert chapter 2 title here
+---
+author: "Heti Pisarev"
+output:
+  html_document: default
+  pdf_document: default
+---
 
+# Chapter 2 - Regression analyis
+```{r}
+date()
+```
 *Describe the work you have done this week and summarize your learning.*
 
 - Describe your work and results clearly. 

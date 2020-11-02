@@ -5,7 +5,7 @@ output:
   pdf_document: default
 ---
 
-# About the project
+# Chapter 1 - About the project
 *No idea what to write here. All GitHub and Markdown stuff is new for me and I am really confused right now. At least I have used R before.*
 
 <b>Link to my GitHub repository</b><br>
