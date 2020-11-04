@@ -1,5 +1,5 @@
 ---
-author: "Heti Pisarev"
+date: "30 10 2020"
 output:
   html_document: default
   pdf_document: default
@@ -10,6 +10,9 @@ output:
 
 <b>Link to my GitHub repository</b><br>
 https://github.com/hetipisarev/IODS-project.git
+
+<b>Link to Markdown cheatsheet</b><br>
+https://rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf
 
 ```{r}
 # This is a so-called "R chunk" where you can write R code.

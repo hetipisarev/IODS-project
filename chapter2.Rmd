@@ -1,22 +1,220 @@
 ---
+title: "  "
 author: "Heti Pisarev"
 output:
   html_document: default
   pdf_document: default
 ---
 
-# Chapter 2 - Regression analyis
-```{r}
+#  Chapter 2 - Regression analysis
+```{r echo=FALSE}
 date()
 ```
 *Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+On the first part
 
-```{r}
-date()
+- read data from web, 
+- create new variables _deep_, _stra_, _surf_ (as rowmeans)
+- rename all headings with lowercase
+- save data as .csv to project's subfolder "data"
+- read and check data from the subfolder
+
+On the second  part
+
+- read data from local sub folder *data*
+- describe data structure, make some descriptive plot
+- estimate regression model
+- describe and evaluate the model
+
+
+## 2.1 Data wrangling 
+### 2.1.1 Make subfolder _data_
+Done!
+
+### 2.1.2 Import and first sight
+```{r eval=TRUE}
+learning2014 = read.table(
+     "http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-data.txt"
+     , dec=".", sep="\t", header=T) 
+```
+First sight to data:
+```{r eval=FALSE}
+View(learning2014) # view data "like-excel"
+dim(learning2014)  # dimensions
+str(learning2014)  # structure
+head(learning2014, n=4) # first 4 rows
+```
+Data holds 183 observations (rows) and 60 variables (columns). All variables are integer type, except character type variable _gender_.
+
+### 2.1.3 Create analysis dataset
+Change variable names _gender_, _age_, _attitude_, _points_ to lowercase:
+```{r eval=TRUE}
+learning2014$age=learning2014$Age
+learning2014$attitude=learning2014$Attitude
+learning2014$points=learning2014$Points
+```
+Attach library for _select_ and _filter_
+```{r eval=TRUE, results=='hide', error=FALSE, warning=FALSE, message=FALSE}
+library(dplyr, quietly=T)  
+```
+Create variables _deep_, _stra_, _surf_ as rowmeans of questions
+```{r eval=TRUE}
+learning2014$deep =
+  rowMeans( 
+    select(learning2014, 
+     one_of(
+          c("D03", "D06", "D07", "D11", "D14", "D15", 
+            "D19", "D22", "D23", "D27", "D30", "D31")
+         )))
+
+learning2014$stra = 
+  rowMeans(
+    select(learning2014, 
+           one_of(
+             c("ST01", "ST04", "ST09", "ST12", "ST17",
+               "ST20", "ST25", "ST28")
+          )))
+
+learning2014$surf = 
+  rowMeans(
+    select(learning2014, 
+           one_of(
+             c("SU02", "SU05", "SU08", "SU10", "SU13",
+               "SU16", "SU18", "SU21", "SU24", "SU26", 
+               "SU29", "SU32") 
+           )))
+
+learning2014$attitude=rowMeans(select(learning2014, 
+                               one_of(
+                                c("Da","Db","Dc","Dd","De",
+                               "Df","Dg","Dh","Di","Dj"))))
+```
+Keep selected columns and rows if _points_>0
+```{r eval=TRUE}
+learning2014 = select(learning2014, 
+      one_of(c("gender","age","attitude", 
+               "deep", "stra", "surf", "points")))
+learning2014 = filter(learning2014, points>0)
+
+dim(learning2014)  
+```
+Data has 7 variables and 166 rows. Hurray! *Hurray!* **Hurray!**
+
+### 2.1.4 Change directory, save and read the data as .csv
+
+Change working directory to project folder:
+
+```{r eval=TRUE}
+setwd("~/kursusIODS2020/IODS-project")
+```
+Save _learning2014_ to subfolder "data" as .csv file
+```{r eval=TRUE}
+write.csv(learning2014, 
+          file = (paste0(getwd(),"/data/learning2014.csv")),
+          row.names=F)
+rm(list = ls())   # cleaning work
+```
+Read data from .csv, placed to subfolder _data_
+```{r eval=TRUE}
+learning2014 = 
+  read.csv(file = (paste0(getwd(), "/data/learning2014.csv"))) 
+```
+Check the data
+```{r eval=TRUE}
+dim(learning2014)
+str(learning2014)
+head(learning2014, n=3)
 ```
 
-Here we go again...
+***
+## 2.2 Data analysis
+
+Change working directory, read data *learning14* from *.csv*-file from subfolder _data_:
+```{r eval=TRUE}
+setwd("~/kursusIODS2020/IODS-project")
+learning2014 = read.csv(file = (paste0(getwd(), "/data/learning2014.csv"))) 
+```
+###  2.2.1 Description of data structure
+See the dimensions and first 3 lines of data:
+```{r eval=TRUE}
+dim(learning2014)
+head(learning2014, n=3)
+```
+Data holds 166 rows and 7 variables:
+
+- gender -- M (Male), F (Female)
+- age -- measured in years
+- points -- exam points
+- attitude -- global attitude toward statistics, expressed as mean of questions Da-Dj (see the link below) 
+- deep  -- deep learning score (mean score of questions D03-D31 (see the link below)) 
+- stra -- strategic learning score (mean of questions ST*)
+- surf -- surf-style learning score (mean of questions SU*)
+
+More exact data specification on this link:
+https://www.mv.helsinki.fi/home/kvehkala/JYTmooc/JYTOPKYS3-meta.txt
+
+### 2.2.2 Description of data
+Descriptive statistics of data and frequencies of _gender_:
+```{r eval=TRUE}
+summary(learning2014)
+table(learning2014$gender)
+```
+Attach the librarys
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+library(GGally)
+library(ggplot2)
+```
+Nice overview graph (*Is it nice? Complex or even complicated is better word... :)*):
+```{r eval=TRUE}
+p <- ggpairs(learning2014, mapping = aes(col = gender, alpha = 0.3), lower = list(combo = wrap("facethist", bins = 20)))
+p
+```
+
+From the descriptions above and the last graph we can see:
+
+* We have 2 times more females than males.
+* Ages are between 17 and 55 years, median age is 22 and mean is 25 years, distribution has right tie. Median age of males are little higher compared females.
+* All score-variables  (_attitude, deep, stra, surf, points_) are continius variables, more or less bell-shaped.
+* Males have little higher attitude score. Deep learning score and points are similar among males and females. Median of strategic and surf-learning score is higher among females.  
+* Top correlation are between exam points and attitude (r=0.4), between surf and deep learning style (r=-0.3), between surf-learning style and attitude (r=-0.17).
+* Correlations are related with gender -- males have higher correlation between surf- and deep learning style (M: r=-0.6, F: r=-0.08) and between surf learning style and attitude (M: r=-0.37, F: r=-0.01)
+
+### 2.2.3 Regression model
+Based on the last figure lets use as descriptive variables _attitude_, _stra_ and _surf_. As these variables doesn't act very differently among genders, I exclude _gender_.  
+```{r eval=TRUE}
+summary(lm(points ~ attitude + stra + surf , data=learning2014))
+```
+From this output:
+
+* Attitude and stategic learning scores are positively related to output variable.
+* Higher surf-style learning score is related with lower exam results. 
+* Relation is significant only on attitude (p-value tests H0: that regression coefficient is equal to 0) .
+
+So, I exclude _stra_ and _surf_ and estimate new simple linear model between _points_ and _attitude_.
+
+```{r eval=TRUE}
+m = lm(points ~ attitude , data=learning2014)
+summary(m)
+```
+### 2.2.4 Summary of fitted model
+
+Now we have significant model between _points_ and _attitude_. Average exam point score is 11.6 if attitude is 0 (the intercept coefficient), each attitude point is related averagely 3.5 points higher exam result. 
+Anyway -- Adj R-square is 18.5%, so the prognostic value of this model is poor.
+On the figure below we can see the regression line with 95% confidence interval, variability of data is quite high.
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+qplot(attitude, points, data = learning2014) + geom_smooth(method = "lm")
+```
+
+### 2.2.5 Diagnostic plots
+```{r eval=TRUE}
+par(mfrow = c(2,2), mai=c(0.6, 0.6, 0.4, 0.1), cex=0.7)
+plot(m, which=c(1,2,5))
+```
+
+**Model residuals vs fitted values.** Between fitted values 24 and 27 are bunch of values with big residuals - there are persons who have quite high attitude values, but low exam point scores. Model gives them too high prognosis.  
+
+From **Q-Q plot** we see the same observations - they have higher standardized residuls than expected.
+
+From **leverage graph** we can see that these persons have influence to regression coefficient -- they are outside of Cook's distance line.
