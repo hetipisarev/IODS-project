@@ -14,6 +14,9 @@ https://github.com/hetipisarev/IODS-project.git
 <b>Link to Markdown cheatsheet</b><br>
 https://rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf
 
+<b>Link to data wrangling cheatsheet</b><br>
+https://rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf
+
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
 
