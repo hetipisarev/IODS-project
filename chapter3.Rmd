@@ -1,0 +1,273 @@
+---
+title: "  "
+author: "Heti Pisarev"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+#  Chapter 3 -- Logistic regression
+```{r echo=FALSE}
+date()
+```
+
+## 3.1 Data wrangling
+
+On this part: 
+- merge downloaded datasets and keep students existing both datasets
+- define high alcohol consumption
+
+Data source: 
+https://archive.ics.uci.edu/ml/datasets/Student+Performance
+
+Here is code:
+
+```{r eval=FALSE}
+# Attach library
+library(dplyr)
+
+# Change working directory
+setwd("~/kursusIODS2020/IODS-project")
+
+# Read 2 datasets from .csv to R
+math = read.csv(file = (paste0(getwd(), "/Data/student-mat.csv")), sep=";") 
+por = read.csv(file = (paste0(getwd(), "/Data/student-por.csv")), sep=";") 
+
+dim(math)  # check data
+dim(por)
+str(math)
+str(por)
+
+# Merge datasets 
+
+# Common columns to use as identifiers
+join_by = c("school","sex","age","address","famsize","Pstatus", "Medu",
+             "Fedu","Mjob","Fjob","reason","nursery","internet")
+
+# Join the two datasets by the selected identifiers,
+# keep rows existing in both table
+math_por <- inner_join(math, por, by = join_by,
+                       suffix = c(".math", ".por"))
+# Check new datafile
+dim(math_por)
+glimpse(math_por)
+
+
+# Next part will combine two possibly different 
+# answers to the same questions for each student -  
+# combine these 'duplicated' answers by taking mean/first answer
+
+# Create a new data frame with only the joined columns
+alc <- select(math_por, one_of(join_by))
+
+# The columns in the datasets which were not used for joining the data
+notjoined_columns <- colnames(math)[!colnames(math) %in% join_by]
+
+# Print out the columns not used for joining
+notjoined_columns
+
+# For every column name not used for joining...
+for(column_name in notjoined_columns) {
+  # select two columns from 'math_por' with the same original name
+  two_columns <- select(math_por, starts_with(column_name))
+  # select the first column vector of those two columns
+  first_column <- select(two_columns, 1)[[1]]
+  # if that first column vector is numeric...
+  if(is.numeric(first_column)) {
+    # take a rounded average of each row of the two columns and
+    # add the resulting vector to the alc data frame
+    alc[column_name] <- round(rowMeans(two_columns))
+  } else { # else if it's not numeric...
+    # add the first column vector to the alc data frame
+    alc[column_name] <- first_column
+  }
+}
+
+# glimpse at the new combined data
+glimpse(alc)
+
+
+# Create new columns - 
+# - alc_use --  average of weekday and weekend alcohol consumption
+# - high_use -- logical if average consumption is more than 2 units
+
+alc <- mutate(alc, alc_use = (Dalc + Walc) / 2)
+alc <- mutate(alc, high_use = alc_use > 2)
+
+dim(alc)
+# [1] 382  35
+str(alc)
+
+# Write data file to locak folder as .csv file
+write.csv(alc, file = (paste0(getwd(), "/data/alc.csv")), row.names=F)
+````
+
+***
+
+## 3.2 Logistic regression analysis
+
+Today's libraries:
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+library(dplyr); library(tidyr); library(ggplot2); library(Epi)
+```
+
+
+### 3.2.2 Read data
+As the result of data merging is not complete there (Reijo's e-mail) and my time has limits, so I cheat and read data from web:
+
+```{r eval=TRUE}
+alc = read.csv(file = "https://github.com/rsund/IODS-project/raw/master/data/alc.csv", sep=",")
+
+dim(alc)
+names(alc)
+```
+
+Data consists information about `r dim(alc)[1]` students. 
+
+This data approach student achievement in secondary education of two Portuguese schools. The data attributes include student grades, demographic, social and school related features) and it was collected by using school reports and questionnaires. Two datasets are provided regarding the performance in two distinct subjects: Mathematics (mat) and Portuguese language (por). Purpose is to find model to describe high alcohol consumption.
+
+Complete data description is on this link
+https://archive.ics.uci.edu/ml/datasets/Student+Performance
+
+
+### 3.2.3 Variables selection, hypotheses
+
+I selected out variables significantly related with high alcohol consumption.
+
+- *absences* -- number of school absences (numeric: from 0 to 93)
+- *studytime* --  weekly study time (numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours)
+- *reason* -- reason to choose this school (nominal: close to 'home', school 'reputation', 'course' preference or 'other')
+- *sex* -- student's sex - male (M), female (F)  
+
+I assume that:
+
+- absences are related with higher alcohol consumption
+- longer study time is related with lower probability of high alcohol consumption
+- the high alcohol consumption is more reare among these who selected school by reputation and/or course selection compared to home and/or other selection reason
+- male students have more frequently high alcohol consumption.
+
+
+### 3.2.4 Variables and alcohol consumption
+
+We have `r table(alc$high_use)[2]` students with high and `r table(alc$high_use)[1]` low alcohol consumption.
+```{r eval=TRUE}
+table(alc$high_use)
+```
+
+
+**Sex** is significantly related with alcohol consumption p<0.001 (Chi-square test). 40% of males and 21% of females have high alcohol consumption.
+```{r eval=TRUE}
+pctab(table(alc$sex, alc$high_use), dec=1)
+chisq.test(alc$high_use, alc$sex)$p.value
+```
+
+
+**Study time**  has nice statistically significant (Chi-sq test: p=`r round(chisq.test(alc$high_use, alc$studytime)$p.value,5)` dose-response relationship with alcohol consumption ("more study = less alcohol"). 
+```{r eval=TRUE}
+ggplot(data = alc, aes(x = as.factor(studytime), fill = high_use)) + 
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("darkolivegreen", "gold")) + 
+  scale_x_discrete(name = "Weekly study time (hours)", 
+                  labels = c("<2", "2-5", "3/5-10" ,">10") ) +
+  scale_y_continuous(name = "Persons frequency")
+```
+
+
+**Absences** and high alcohol consumption are statistically significantly related (Mann-Whitney test p=`r round(wilcox.test(alc$absences~alc$high_use)$p.value, 5)`). 
+
+```{r eval=TRUE}
+par(mai=c(0.6, 0.6, 0.4, 0.1), cex=1)
+boxplot(alc$absences ~ alc$high_use, ylab="No of absences", xlab="High alcohol consumption")
+
+```
+
+
+**Reason to choose school** is related with high alcohol consumption
+ (p=`r chisq.test(alc$high_use, alc$reason)$p.value`). 
+```{r eval=TRUE}
+
+ggplot(data = alc, aes(x = reason, fill = high_use)) + 
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("darkolivegreen", "gold")) + 
+  scale_x_discrete(name = "Reason to choose school") +
+  scale_y_continuous(name = "Persons frequency") 
+```
+
+
+All my hypotheses are fine.
+
+
+### 3.2.5 The model
+Nice function for better logistic regression output reading
+```{r eval=TRUE}
+expcoef = function(model)           { 
+  coeffs <- coef(summary(model)) 
+      or <- exp(coeffs[ ,1]) 
+     lci <- exp(coeffs[ ,1] - 1.96 * coeffs[ ,2]) 
+     uci <- exp(coeffs[ ,1] + 1.96 * coeffs[ ,2]) 
+       p <- round(coeffs[ ,4], 5)
+ expcoef <- cbind("OR"=round(or,2), 
+                  "lci"=round(lci,2), 
+                  "uci"=round(uci,2), p)         
+  expcoef 
+}
+```
+Estimate logistic regression model and see the output
+```{r eval=TRUE}
+m <- glm(high_use ~ relevel(as.factor(studytime), 3) + absences + 
+           relevel(as.factor(reason), "reputation") +  sex, data = alc, family = "binomial")
+
+expcoef(m)
+```
+
+ Adjusted model reveals:
+   
+   - Below 5 hours study time per week is related with 3 times higher odds of high alcohol consumption compared with 3-5 to 10 hours study time per week. 
+   - Each absence is related to increase of high alcohol consumption (OR=1.09).
+   - Other reason to choose particular school is related with 3x higher alcohol consumption compared reputation-choice.
+   - Males have 2.3 times higher odds to alcohol consumption compared females.
+
+
+### 3.2.6 Predictions
+
+Add the predicted probabilities to 'alc' and make a prediction of high_use (probablities>0.5)
+```{r eval=TRUE}
+alc <- mutate(alc, probability = predict(m, type = "response"))
+alc <- mutate(alc, prediction = probability>0.5)
+```
+Function that gives target variable versus the predictions, prediction cut-off value is changeable:
+```{r eval=TRUE}
+confusion = function(ref) {
+  table(high_use = alc$high_use, prediction = alc$probability>ref)}
+```
+
+Confusion matrix (the target variable versus the predictions) and relative frequencies:
+```{r eval=TRUE}
+confusion(0.5)
+confusion(0.5) %>% prop.table %>% addmargins
+```
+
+Calculate relative frequency of incorrect predictions
+```{r eval=TRUE}
+sum(confusion(0.5)[1,2], confusion(0.5)[2,1])/sum(confusion(0.5))
+```
+The `r round(100*confusion(0.5)[1,1]/sum(confusion(0.5)),1)`% of sample is correctly predicted to low-alcohol group and 
+`r round(100*confusion(0.5)[2,2]/sum(confusion(0.5)),1)`% is correctly defined as high-alcohol group. Totally wrong predictions had `r round(100*sum(confusion(0.5)[1,2], confusion(0.5)[2,1])/sum(confusion(0.5)),1)`% of sample.
+
+Simple testing:
+
+Prediction cut-off point 0 should give all predictions as high-alcohol
+```{r eval=TRUE}
+confusion(0)
+```
+and prediction cut-off point 1 should give all low-alcohol predictions
+```{r eval=TRUE}
+confusion(1)
+```
+
+ It seems working!
+
+### 3.2.7 10-fold cross-validation
+### 3.2.8 Find the best model
+
+Really sorry - no time for bonus exercises on this time. I worked cross-validation throw from DataCamp and I found it useful.
