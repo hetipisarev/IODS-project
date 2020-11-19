@@ -12,7 +12,8 @@ ii <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_22
 
 ### 4.1.3 Explore the datasets
 
-dim(hd); dim(ii)
+dim(hd)
+dim(ii)
 
 names(hd)
 names(ii)

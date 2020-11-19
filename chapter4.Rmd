@@ -273,8 +273,8 @@ I think that clusters are more clearly separated by variables medv, lstat, age, 
 _**Exercise:** Perform k-means on the original Boston data with some reasonable number of clusters (> 2). Remember to standardize the dataset. Then perform LDA using the clusters as target classes. Include all the variables in the Boston data in the LDA model. Visualize the results with a biplot (include arrows representing the relationships of the original variables to the LDA solution). Interpret the results. Which variables are the most influencial linear separators for the clusters?_
 
 ```{r}
-boston_scaled <- as.data.frame(scale(Boston))
-dist_eu <- dist(boston_scaled)
+boston_scaled = as.data.frame(scale(Boston))
+dist_eu = dist(boston_scaled)
 boston_scaled$target<-kmeans(dist_eu, centers = 3)$cluster
 lda.fit <- lda(target  ~ ., data = boston_scaled)
 classes <- as.numeric(boston_scaled$target)

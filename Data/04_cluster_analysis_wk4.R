@@ -176,5 +176,5 @@ plot(lda.fit , dimen = 2, col=classes, pch=classes)
 lda.arrows(lda.fit, myscale = 1)
 lda.pred <- predict(lda.fit, newdata = boston_scaled)
 a = table(correct = boston_scaled$target, predicted = lda.pred$class)
-a
+a 
 sum(a[1,1]+a[2,2]+a[3,3]) / sum(a)
