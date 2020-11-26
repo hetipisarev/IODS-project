@@ -12,6 +12,13 @@ output:
 date()
 ```
 
+<b> Useful links to PCA</b><br>
+http://factominer.free.fr/ <br>
+https://setosa.io/ev/principal-component-analysis/ <br>
+https://arxiv.org/pdf/1404.1100.pdf <br>
+https://www.fbbva.es/microsite/multivariate-statistics/biplots.html <br>
+https://youtu.be/aiqGyLGrQ48?list=PLnZgp6epRBbTsZEFXi_p6W48HhNyqwxIu <br>
+
 ## 5.1 Data wrangling
 
 Comment: Continue data wrangling from last week. Change non-numeric data to numeric data, remove rows with NA-s, keep only country-based data, keep selected variables
