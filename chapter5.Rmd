@@ -1,0 +1,255 @@
+---
+title: " "
+author: "Heti Pisarev"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+#  Chapter 5 -- Dimensionality reduction techniques
+```{r echo=FALSE}
+date()
+```
+
+## 5.1 Data wrangling
+
+Comment: Continue data wrangling from last week. Change non-numeric data to numeric data, remove rows with NA-s, keep only country-based data, keep selected variables
+
+```{r eval=FALSE}
+library(stringr); library(dplyr); library(tidyr)
+```
+
+### 5.1.0 Read the data
+
+```{r eval=FALSE}
+human <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human1.txt", stringsAsFactors = F)
+
+str(human)
+summary(human)
+dim(human)
+```
+
+### 5.1.1 Mutate data
+
+Change 12,000-style variable to numeric 12000-style
+
+```{r eval=FALSE}
+human = mutate(human, GNI=as.numeric(str_replace(human$GNI, pattern=",", replace ="")))
+summary(human$GNI)
+```
+
+### 5.1.2 Keep selected variables
+
+```{r eval=FALSE}
+# Columns to keep
+keep <- c("Country", "Edu2.FM", "Labo.FM", "Edu.Exp", "Life.Exp", "GNI", "Mat.Mor", "Ado.Birth", "Parli.F")
+
+human <- select(human, one_of(keep))
+names(human)
+dim(human)
+```
+
+### 5.1.3 Remove all rows with missing values
+
+```{r eval=FALSE}
+human <- filter(human, complete.cases(human))
+dim(human)
+```
+
+### 5.1.4 Remove all rows with region data
+
+```{r eval=FALSE}
+# Last rows on human data
+tail(human,n=10)
+
+# Choose everything until the last 7 observations
+human <- human[1:(nrow(human) - 7), ]
+
+dim(human)
+```
+
+### 5.1.5 Adapt row names from variable country  and save the data
+
+```{r eval=FALSE}
+rownames(human) <- human$Country
+human <- select(human, -Country)
+
+dim(human)
+
+write.csv(human, file = (paste0(getwd(), "/data/human.csv")), row.names=T)
+```
+
+***
+
+## 5.2 Data analysis
+
+Read data
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+human = read.csv(file = (paste0(getwd(), "/data/human.csv")), row.names=1)
+```
+Data has `r dim(human)[1]` rows and `r dim(human)[2]` variables.
+
+Today's libraries
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+library(ggplot2); library(GGally)
+library(tidyr); library(dplyr)
+library(corrplot); library(MASS)
+```
+
+
+### 5.2.1 Overview of data
+
+```{r eval=TRUE}
+names(human)
+```
+
+Explabnation of variables in dataset:
+
+variables | explanation
+----------|--------------
+Edu.Exp | Expected years of schooling 
+Life.Exp | Life expectancy at birth
+GNI | Gross National Income per capita
+Mat.Mor | Maternal mortality ratio
+Ado.Birth | Adolescent birth rate
+Parli.F | Percetange of female representatives in parliament
+Edu2.FM | Ratio of proportion of females and males with at least secondary education (educational inequality between females and males)
+Labo.FM | Ratio of proportion of females and males in the labour force (labour force inequality between females and males)
+
+```{r eval=TRUE}
+
+str(human)
+summary(human)
+```
+
+All variables are numeric. Values are on different scale, and results probably depends on history and development of county (poorer countries have lower life expectancy, less educated females, higher maternal mortality etc).
+
+Visualize the human variables:
+```{r eval=TRUE}
+ggpairs(human)
+```
+
+Variables are not distributed normally. 
+
+High positive correlations (r>0.7) are between:
+
+* life expectancy and expected years of schooling
+* maternal mortality ratio and adolescent birth rate
+
+High negative correlatios (r<-0.7) are between:
+
+* maternal mortality ratio and expected years of schooling
+* maternal mortality ratio and life expectancy
+* life expectancy and adolescent birth rate
+
+
+### 5.2.2 PCA, not standardized data
+
+_A biplot is a way of visualizing the connections between two representations of the same data._
+_First, a simple scatter plot is drawn where the observations are represented by two principal components (PC's). Then, arrows are drawn to visualize the connections between the original variables and the PC's. The following connections hold: * The angle between the arrows can be interpret as the correlation between the variables. * The angle between a variable and a PC axis can be interpret as the correlation between the two. * The length of the arrows are proportional to the standard deviations of the variables_
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+pca_human <- prcomp(human)
+summary(pca_human)
+biplot(pca_human, choices = 1:2, cex=c(0.8, 1),col = c("grey70", "deeppink2"))
+
+```
+
+
+### 5.2.3 PCA,  standardized data
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+human_std <- scale(human)
+pca_human_std <- prcomp(human_std)
+summary(pca_human_std)
+biplot(pca_human_std, choices = 1:2, cex=c(0.8, 1),col = c("grey40", "deeppink2"))
+```
+
+On the first PCA analysis is key-variable Gross National Income per capita (GNI). As it has high values (on really different scale compared others) and huge variability, it holds 99% of data variability and principal component 1 is highly tilted to GNI.
+
+The second PCA analysis is done on scaled data (means are around zero and standard deviation should be 1). First PC holds 53% of variability, second 16% and third 9%. It seems that preferred number of principal components is two. 
+
+By the plot:
+
+* percetange of female representatives in parliament (Parli.F) and  labour force inequality between females and males (Labo.FM) is going to same PC (PC2). Arrows are on the same direction and angle between them is small, it means they positively correlated.  
+
+* maternal mortality ratio (Mat.Mor) is related with adolescent birth rate (Ado.Birth) and it belongs to the first principal component
+
+* Arrows to expected years of schooling (Edu2.FM), Life expectancy at birth (Life.Exp), Gross National Income per capita)(GNI), educational inequality between females and males (Edu2.FM) are near to each other and belongs to PC1 (as birth rate and mortality ratio) but on other direction.
+
+
+### 5.2.4 Interpretation
+
+Results are reasonable.
+
+Percetange of female representatives in parliament (Parli.F) and  labour force inequality between females and males (Labo.FM) are related and both show female rights on the country - in the country, where females doesn't go to payed work, they can't go to politics ether.
+
+Maternal mortality ratio (Mat.Mor) and is related with adolescent birth rate (Ado.Birth) and they both represent women's heath care. Higher scores means poorer health care.
+
+The last group is little more tricky. High life expectancy at birth shows high healt care and well-being of society. Greater expected years of schooling shows greater wealth and development of country.  Higher Gross National Income per capita shows higher wealth and development of country. Higher educational inequality between females and males shows poorer development of country and also lower women's health care. They are in coherent, but for my opinion they measure little different sides of society.
+
+
+### 5.2.5 Multiple Correspondence Analysis
+
+The tea dataset and packages: 
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+library(FactoMineR); library(dplyr); library(tidyr)
+data(tea)
+```
+Data has `r dim(tea)[1]` rows and `r dim(tea)[2]` variables.
+
+The data used here concern a questionnaire on tea - how subjects drink tea, what are their product's perception  and some personal details (4 questions).
+
+We keep only 6 selected variables:
+
+```{r}
+keep_columns <- c("Tea", "How", "how", "sugar", "where", "lunch")
+tea_time <- dplyr::select(tea, one_of(keep_columns))
+```
+
+All variables are categorical and distribution of answers are on plots below.
+
+```{r eval=FALSE, error=FALSE, warning=FALSE, message=FALSE}
+str(tea_time)
+summary(tea_time)
+```
+
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+
+Main part of person get their tea from chain store, they use tea bags, drink their tea without additions (milk/lemon), favorite sort is Earl Grey, and half of persons add sugar, and they drink tea mostly not-lunch time. 
+
+**Multiple correspondence analysis**
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+mca <-   MCA(tea_time, graph = FALSE)
+```
+
+```{r eval=FALSE, error=FALSE, warning=FALSE, message=FALSE}
+summary(mca)
+```
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+mca$eig
+```
+
+Two first dimensions describe 15% and 14% of variance.
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+# visualize MCA
+plot(mca, invisible=c("ind"), habillage = "quali")
+```
+
+From plot we can see, that there are some groups for result:
+
+* tee shop and buying unpakcage tea are close
+* tee bag and chain store are close
+* drinking tea for non-lunch is close to drinking it with sugar and no other additions (milk/lemon) 
+* together goes early gray and milk 
+* together goes black tea and no sugar
+
+Results are expectable.
