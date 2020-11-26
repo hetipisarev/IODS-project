@@ -1,6 +1,7 @@
 # Author: Heti Pisarev
 # Date: 26.11.2020
-# Comment: Continue data wrangling from last week
+# Comment: 
+# Continue data wrangling from last week
 # Change non-numeric data to numeric data
 # Remove rows with NA-s
 # Keep only country-based data

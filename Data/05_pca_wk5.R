@@ -71,13 +71,14 @@ summary(tea_time)
 gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
 
 # multiple correspondence analysis
-mca <-   MCA(tea_time, graph = TRUE)
+mca <- MCA(tea_time, graph = TRUE)
 
 # summary of the model
 summary(mca)
+
 mca$eig
 
-plot(mca, , invisible=c("ind"), habillage = "quali")
+plot(mca, invisible=c("ind"), habillage = "quali")
 plot(mca, invisible=c("var"))
 
 

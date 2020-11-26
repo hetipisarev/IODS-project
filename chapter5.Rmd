@@ -73,7 +73,7 @@ dim(human)
 
 ```{r eval=FALSE}
 rownames(human) <- human$Country
-human <- select(human, -Country)
+human <- dplyr::select(human, -Country)
 
 dim(human)
 
@@ -108,7 +108,7 @@ names(human)
 Explabnation of variables in dataset:
 
 variables | explanation
-----------|--------------
+------|--------------
 Edu.Exp | Expected years of schooling 
 Life.Exp | Life expectancy at birth
 GNI | Gross National Income per capita
