@@ -1,0 +1,420 @@
+---
+title: " "
+author: "Heti Pisarev"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+#  Chapter 6 -- Analysis of longitudinal data
+```{r echo=FALSE}
+date()
+```
+
+## 6.1 Data wrangling
+Libraries needed for data wrangling:
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+```
+
+For examples we have two datasets.
+
+**Dataset 1:** 40 male subjects were randomly assigned to one of two treatment groups and each subject was rated on the brief psychiatric rating scale (BPRS) measured before treatment began (week 0) and then at weekly intervals for eight weeks. The BPRS assesses the level of 18 symptom constructs such as hostility, suspiciousness, hallucinations and grandiosity; each of these is rated from one (not present) to seven (extremely severe). The scale is used to evaluate patients suspected of having schizophrenia.
+
+**Dataset 2:** Data from a nutrition study conducted in three groups of rats. The three groups were put on different diets, and each animal’s body weight (grams) was recorded repeatedly (approximately weekly, except in week seven when two recordings were taken) over a 9-week period. The question of most interest is whether the growth profiles of the three groups differ.
+
+
+### 6.1.1 Read datasets, see the dimentions and structure.
+ 
+**BPRS** 
+
+```{r }
+BPRS = read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt", sep = " ", header = T)
+
+# dimensions and structure
+str(BPRS)
+dim(BPRS)
+table(BPRS$treatment)
+```
+
+Data has `r dim(BPRS)[1]` subjects and `r dim(BPRS)[2]` variables. Data has `r length(table(BPRS$treatment))` treatment groups and subjects are measured 8 times.
+
+```{r eval=TRUE}
+attach(BPRS)
+par(mfrow=c(2,1), mai=c(0.6,0.5,0.05,0.05), cex=0.7)
+boxplot(BPRS[treatment==1,3:11], ylim=c(20,100), las=1)
+boxplot(BPRS[treatment==2,3:11], ylim=c(20,100), las=1)
+detach(BPRS)
+```
+
+BPRS score decreases over time on both treatment groups.
+
+
+**rats** 
+
+```{r}
+rats <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", sep  ="\t", header = T)
+
+# dimensions and structure
+str(rats)
+dim(rats)
+table(rats$Group)
+```
+
+Data has `r dim(rats)[1]` subjects and `r dim(rats)[2]` variables. Data has `r length(table(rats$Group))` treatment groups and subjects are measured 11 times.
+
+```{r eval=TRUE}
+attach(rats)
+par(mfrow=c(3,1), mai=c(0.6,0.5,0.05,0.05), cex=0.7)
+boxplot(rats[Group==1,3:13])
+boxplot(rats[Group==2,3:13])
+boxplot(rats[Group==3,3:13])
+detach(rats)
+```
+
+Rats weight is growing over the time on each diet groups. Growth rate seems different. 
+
+
+### 6.1.2 Replace subject indentificator and group variable to factor
+
+```{r eval=TRUE}
+BPRS$treatment <- factor(BPRS$treatment)
+BPRS$subject <- factor(BPRS$subject)
+str(BPRS)
+
+rats$Group <- factor(rats$Group)
+rats$ID <- factor(rats$ID)
+str(rats)
+```
+
+
+### 6.1.3 Convert to long form, extract time variable as numeric 
+
+```{r}
+# Reshape
+BPRSL <-  BPRS %>% gather(key = weeks, value = bprs, -treatment, -subject)
+head(BPRSL, n=3)
+str(BPRSL)
+
+# Extract the week number
+BPRSL <-  BPRSL %>% mutate(week = as.integer(substr(BPRSL$weeks, 5, 5)))
+
+# Reshape
+ratsl <-  rats %>% gather(key = WD, value = weight, -Group, -ID)
+str(ratsl)
+
+# Extract the week number
+ratsl <-  ratsl %>% mutate(Time = as.integer(substr(ratsl$WD, 3, 5)))
+
+# Check results
+table(ratsl$WD, ratsl$Time)
+```
+Catecorical WD is now numeric Time. Everything worked!
+
+### 6.1.4 Overview
+
+**rats**
+
+Original data consisted `r length(table(rats$ID))` rows (subjects) and  `r dim(rats)[2]-2` timepoints. Each subject had 1 data row. Reshaped data should have `r length(table(rats$ID))`x`r dim(rats)[2]-2` = `r length(table(rats$ID))* (dim(rats)[2]-2)` rows. Each subject has `r dim(rats)[2]-2` data row. 
+Data sholed have subject identificator, grouping variable, time variable and weight measure .
+
+Results:
+
+```{r eval=TRUE}
+dim(ratsl)  
+names(ratsl)
+length(table(ratsl$ID))  # still 16 subjects
+boxplot(ratsl$weight ~ ratsl$Time + ratsl$Group)
+```
+First diet group has lowest weights, second group has biggest variability on weights and third diet group has highest weihts. 
+
+
+**BPRS**
+
+Original data consisted `r 2*length(table(BPRS$subject))` rows (subjects) and  `r dim(BPRS)[2]-2` timepoints. Each subject had 1 data row. Reshaped data should have `r 2*length(table(BPRS$subject))`x`r dim(BPRS)[2]-2` = `r 2*length(table(BPRS$subject))* (dim(BPRS)[2]-2)` rows. Each subject has `r dim(BPRS)[2]-2` data row. Subject IDs are same in both groups (1-20). 
+Data should have subject identificator, grouping variable, time variable and bprs measure .
+
+Results:
+
+```{r eval=TRUE}
+dim(BPRSL)
+names(BPRSL)
+2*length(table(BPRSL$subject))  # still 2x20 subjects
+boxplot(BPRSL$bprs ~ BPRSL$week + BPRSL$treatment)
+```
+BPRS scores decreas on both treatmet groups over time.
+
+Write data to file
+
+```{r}
+write.csv(ratsl, file = (paste0(getwd(), "/data/ratsl.csv")), row.names=T)
+write.csv(BPRSL, file = (paste0(getwd(), "/data/bprsl.csv")), row.names=T)
+```
+
+***
+***
+
+
+## 6.2 Longitudinal data analysis on **rats** data (Chapt 8)
+
+Access the packages dplyr and tidyr
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+Read the data and factorize variables Group and ID. See the structure and dimentions.
+
+```{r}
+ratsl = read.csv(file = (paste0(getwd(), "/data/ratsl.csv")), row.names=1)
+ratsl$Group <- factor(ratsl$Group)
+ratsl$ID <- factor(ratsl$ID)
+str(ratsl)
+head(ratsl, n=3)
+```
+
+Draw  the plot of individual response profiles by treatment group for the BPRS data.
+
+```{r}
+ggplot(ratsl, aes(x = Time, y = weight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(ratsl$weight), max(ratsl$weight)))
+```
+
+Graph shows that rats weight is growing by time. Diet group 1 has lowest weights, difference btw first and other crops is remarkable. Group 3 has highest weights, but on group 3 we see big outlier - one of rats are much heavier than other, this observation may influence our estimates.  
+
+For better understanding of trends we standardise weight on each time point. 
+
+```{r}
+ratsl <- ratsl %>%
+  group_by(Time) %>%
+  mutate(stdweight = scale(weight)) %>%
+  ungroup()
+
+ggplot(ratsl, aes(x = Time, y = stdweight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(name="standardized weight", limits = c(min(ratsl$stdweight), max(ratsl$stdweight)))
+```
+
+From last graph we can see clearly outliers and on third group difference from mean goes less different on each time points. It means that probably increase of weight  is not so quick as on other groups.
+
+**Summary measure analysis**
+
+Lets summarize data and present mean and standard error of weight by treatment and week. 
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3 }
+n <- ratsl$Time %>% unique() %>% length()
+
+ratss <- ratsl %>%
+  group_by(Group, Time) %>%
+  summarise( mean = mean(weight), se = sd(weight)/sqrt(n)) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(ratss)
+
+# Plot the mean profiles
+ggplot(ratss, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=1) +
+  scale_shape_manual(values = c(1,2,3))+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  scale_y_continuous(name = "mean(weight) +/- se(weight)")
+```
+
+Results are similar as we saw from individual data - first diet group has lower weights and lower variability. Second diet group has highest variability (probably related with outlier) and third group has highest weight. From this graph we can assume that second and third group gaining weight more rapidly compared diet group 1.  
+
+We can present also medians and boxplots. From there we see the outlier, lets try to let it out and see the results again.
+```{r fig.width=3, fig.height=2}
+ratsl10 <- ratsl %>%
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>%
+  summarise( mean=mean(weight) ) %>%
+  ungroup()
+head(ratsl10, n=3 )
+
+# Glimpse the data
+glimpse(ratsl10)
+
+# Draw a boxplot of the mean versus treatment
+ggplot(ratsl10, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight), Time 8-64")
+
+# Create a new data by filtering the outlier and adjust the ggplot code the draw the plot again with the new data
+ratsl10s <- ratsl10 %>%  filter(mean<550)
+
+ggplot(ratsl10s, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight), Time 8-64")
+```
+
+Lets test the differences. I will do t-test between groups and use Bonferroni correction to avoid multiple testing problem.
+But first - I present standard deviations of the groups, to decide are the deviations equal or not.  
+  
+```{r}
+tapply(ratsl10s$mean, ratsl10s$Group, sd)
+
+# Perform a two-sample t-test
+t1=t.test(mean[Group!=3] ~ Group[Group!=3], data = ratsl10s, var.equal = TRUE)
+t2=t.test(mean[Group!=2] ~ Group[Group!=2], data = ratsl10s, var.equal = FALSE)
+t3=t.test(mean[Group!=1] ~ Group[Group!=1], data = ratsl10s, var.equal = FALSE)
+```
+
+
+group means | difference |  dif conf.int | Bonferroni-corrected p-value
+---------|--------|---------|-------------
+1 vs 2: `r round(t1$estimate)` | `r round(t1$estimate[1]-t1$estimate[2])` | `r round(t1$conf.int)` | `r 3*t1$p.value`
+1 vs 3: `r round(t2$estimate)` | `r round(t2$estimate[1]-t2$estimate[2])` | `r round(t2$conf.int)` | `r 3*t2$p.value`
+2 vs 3: `r round(t3$estimate)` | `r round(t3$estimate[1]-t3$estimate[2])` | `r round(t3$conf.int)` | `r 3*t3$p.value`
+
+All means are statistically significantly different.
+
+Now I add weight's baseline values from original data as a new variable to the summary data and estimate linear regression model.
+
+```{r}
+ratsl10s <- ratsl10 %>%
+  mutate(baseline = rats$WD1)
+
+str(ratsl10s)
+```
+
+Fit the linear model with the mean as the response 
+
+```{r}
+fit <- lm(mean ~ factor(Group) + baseline, data = ratsl10s)
+summary(fit)
+anova(fit)
+```
+
+Model says that if we adsjust to the baseline weight than mean weights of 2nd and 3rd group are not statistically significantlydifferent from 1st group mean weight.
+But this analysis does not include the time.
+
+
+## 6.3 Longitudinal data analysis on **BPRS** data  (Chapt 9)
+
+To investigate the use of linear mixed effects models in practice, we will BPRS data
+
+```{r}
+BPRSL = read.csv(file = (paste0(getwd(), "/data/bprsl.csv")), row.names=1)
+
+BPRSL$treatment <- factor(BPRSL$treatment)
+BPRSL$subject <- factor(BPRSL$subject)
+
+str(BPRSL)
+```
+
+Individual plot of BPRS scores:
+  
+```{r fig.width=5, fig.height=4}
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(name="standardized weight")
+```
+
+**Linear regression**
+
+We will fit a multiple linear regression model with bprs as response and week and treatment as explanatory variables (Ignore the repeated-measures structure).
+
+```{r fig.width=3, fig.height=2}
+bprsl_reg <- lm(bprs~week + factor(treatment), data=BPRSL)
+
+summary(bprsl_reg)
+```
+
+Difference between treatment grops is 0.57 points and this is not statistically significant. But each weeh decreases score by 2.2 points and this is significant result.
+
+**The Random Intercept Model**
+
+We will  fit the random intercept model for the same two explanatory variables: week and treatment. Fitting a random intercept model allows the linear regression fit for each study subject to differ in intercept from other subjects.
+
+We will use the lme4 package, the random-effects terms distinguished by vertical bars (|).
+
+```{r eval=TRUE, error=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+library(lme4)
+
+# Create a random intercept model
+bprs_ref <- lmer(bprs~week + factor(treatment) + (1 | subject), data = BPRSL, REML = FALSE)
+
+# Print the summary of the model
+summary(bprs_ref)
+```
+
+Treatment effect is not significant, but week effect is - it means that scores are decreasing by the time, but decreas is not different on both groups.
+
+Now we estimate the model where we allow the random intercept and random slope by weeks. So we can take account patients individual differences on time.
+
+```{r}
+# Create a random intercept and random slope model
+bprs_ref1 <- lmer(bprs~week + factor(treatment) + (week | subject), data = BPRSL, REML = FALSE)
+
+# print a summary of the model
+summary(bprs_ref1)
+```
+
+Random effects residual is smaller compared with first random effects model. But main results are same - treatment effect is not significant, but scores  decreasing week by week.
+
+Perform an ANOVA test on the two models:
+
+```{r}
+anova(bprs_ref1, bprs_ref)
+```
+
+Deviance residuals are significantly smaller on second model.  
+
+Lets add interaction of time and treatment. 
+
+```{r}
+# create a random intercept and random slope model with the interaction
+bprs_ref2 <- lmer(bprs ~ week + treatment + week*treatment + (week | subject), data = BPRSL, REML = FALSE)
+
+# print a summary of the model
+summary(bprs_ref2)
+
+# perform an ANOVA test on the two models
+anova(bprs_ref2, bprs_ref1)
+```
+Model with interactions is not significantly different from old one, but p-value is very close, so we can keep the new one (with interactions).
+
+Lets draw the plot observed of BPRS individual data and compare it with the fitted values of last model.
+
+```{r,  fig.width=4, fig.height=3}
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  scale_x_continuous(name = "Time (weeks)") +
+  scale_y_continuous(name = "bprs") +
+  theme(legend.position = "none")
+
+# Create a vector of the fitted values
+Fitted <- fitted(bprs_ref2)
+
+# Create a new column fitted to RATSL
+BPRSL=BPRSL %>% mutate(Fitted=Fitted)
+
+ggplot(BPRSL, aes(x = week, y = Fitted, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  scale_x_continuous(name = "Time (weeks)") +
+  scale_y_continuous(name = "Fitted bprs") +
+  theme(legend.position = "none")
+```
+
+
